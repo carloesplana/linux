@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+
+# ---------------------------------------------
+# This has been updated to work with Fedora 35
+# ---------------------------------------------
+
+# Run a System Update
+sudo dnf update
+
+# Enable RPM Fusion
+sudo rpm -Uvh http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+sudo rpm -Uvh http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+# Enable Fastest Mirror, Maximum Parallel Downloads and Delta RPM
+echo "fastestmirror=true" | sudo tee -a /etc/dnf/dnf.conf
+echo "max_parallel_downloads=5" | sudo tee -a /etc/dnf/dnf.conf
+echo "deltarpm=true" | sudo tee -a /etc/dnf/dnf.conf
+
+# Install Fedy
+sudo dnf copr enable kwizart/fedy
+sudo dnf install fedy -y
+
+# Reduce Battery Usage
+sudo dnf install tlp tlp-rdw
+sudo systemctl enable tlp
+
+# Lenovo Thinkpad specific packages for TLP which gives you more info and control on your battery.
+sudo dnf install https://repo.linrunner.de/fedora/tlp/repos/releases/tlp-release.fc$(rpm -E %fedora).noarch.rpm
+sudo dnf install kernel-devel akmod-acpi_call akmod-tp_smapi
+# After installation, run the command below to view the Battery informations and status.
+sudo tlp-stat -b
+
+# Multimedia plugins for audio and video
+sudo dnf group upgrade --with-optional Multimedia
+
+# Development Tools
+sudo dnf groupinstall "Development Tools" "Development Libraries"
+
+# Tweaks and Extentions
+sudo dnf install gnome-tweaks
+sudo dnf install gnome-extensions-app
+
+# Set hostname
+echo "Let's setup a new hostname"
+read -rp 'hostname: ' myhostname 
+sudo hostnamectl set-hostname "$myhostname"
+
+# configure flatpak & flathub
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak update
+
+# snap support
+sudo dnf install -y snapd
+sudo ln -s /var/lib/snapd/snap /snap
+# ------------ you need to reboot ------------
+# sudo reboot now
+# You can check if updates are required with the following command:
+# sudo snap refresh
+
+# other applications
+
+## Multimedia apps
+sudo dnf install vlc clementine audacity kdenlive -y
+
+## Graphics
+sudo dnf install inkscape gimp blender scribus -y
+
+## LaTeX
+# NOTE: texlive-scheme-full will take a while to download (~2Gb) and install!
+sudo dnf install texlive-scheme-full -y
+sudo dnf install texlive-chktex python3-pylatex texstudio -y
+
+## utilities
+sudo dnf install htop gscan2pdf fontforge meld stacer handbrake transmission -y
+
+## Bible Tools
+sudo dnf install xiphos -y
+
+# Text Editors
+
+## vim
+sudo dnf install vim -y
+
+## VS Code
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc && \
+sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo' && \
+sudo dnf check-update && \
+sudo dnf install code -y
+
+## sublime text
+sudo rpm -v --import https://download.sublimetext.com/sublimehq-rpm-pub.gpg && \
+sudo dnf config-manager --add-repo https://download.sublimetext.com/rpm/stable/x86_64/sublime-text.repo && \
+sudo dnf install sublime-text -y
+
+# web browsers
+
+## brave
+sudo dnf install dnf-plugins-core && \
+sudo dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/ && \
+sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
+sudo dnf install brave-browser -y
+
+## google chrome
+sudo dnf install fedora-workstation-repositories -y && \
+sudo dnf config-manager --set-enabled google-chrome && \
+sudo dnf install google-chrome-stable -y
+
+# ZSH
+
+## core
+sudo dnf install zsh -y
+
+## provides the chsh command to change the SHELL for current user
+sudo dnf install util-linux-user -y
+
+## ohmyzsh
+sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+## powerlevel10k
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+sed 's/robbyrussell/powerlevel10k\/powerlevel10k/g' -i ~/.zshrc
+
+## powerline fonts
+sudo dnf install tmux-powerline vim-powerline powerline-fonts
+wget https://github.com/Lokaltog/powerline/raw/develop/font/PowerlineSymbols.otf https://github.com/Lokaltog/powerline/raw/develop/font/10-powerline-symbols.conf
+wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf
+wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf
+wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf
+wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf
+sudo mv -v PowerlineSymbols.otf /usr/share/fonts/
+sudo mv -v MesloLGS*.ttf /usr/share/fonts/
+sudo fc-cache -vf
+sudo mv 10-powerline-symbols.conf /etc/fonts/conf.d/
+
+## zsh plugins
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+## minimize, maximize buttons
+gsettings set org.gnome.desktop.wm.preferences button-layout ":minimize,maximize,close"
+
+## rclone
+sudo dnf install rclone
+
+# openSSL
+sudo dnf install openssl
+
+## youtube-dl
+sudo -H pip3 install youtube-dl
+
+# virtualenvwrapper
+sudo -H pip3 install virtualenvwrapper
+export WORKON_HOME=~/Env
+mkdir -p "$WORKON_HOME"
+
+# TODO: add a couple of lines here that update ~/.zshrc with virtualenvwrapper config
+
+# pyenv
+dnf install sqlite-devel tk-devel
+curl https://pyenv.run | bash
+
+# Node.js
+curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
+sudo dnf install -y nodejs
+
+## To install the Yarn package manager, run:
+curl -sL https://dl.yarnpkg.com/rpm/yarn.repo | sudo tee /etc/yum.repos.d/yarn.repo
+sudo dnf install yarn -y
+
+## ruby plus some gems
+
+sudo dnf install ruby-devel -y
+
+### https://github.com/travis-ci/travis.rb
+gem install travis --no-document
+
+### https://github.com/athityakumar/colorls
+gem install colorls
+
+## Android Development
+
+### install KVM to have hardware acceleration for the better performance of Android Studio
+### if your machine supports VT technology.
+
+### check your CPU supports Intel VT / AMD SVM or not:
+egrep --color 'vmx|svm' /proc/cpuinfo | wc -l
+###  If the above output is non-zero, then your machine has Intel or AMD virtualization support.
+sudo dnf install qemu-kvm bridge-utils libvirt virt-install -y
+
+### install 32-bit libraries for Android Studio installation
+sudo dnf install -y zlib.i686 ncurses-libs.i686 bzip2-libs.i686 -y
+
+### JDK
+sudo dnf install java-1.8.0-openjdk -y
+
+## Docker
+
+sudo dnf remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager \
+    --add-repo \
+    https://download.docker.com/linux/fedora/docker-ce.repo
+sudo dnf install docker-ce docker-ce-cli containerd.io
+sudo systemctl start docker
+# Verify that Docker Engine is installed correctly by running the hello-world image.
+sudo docker run hello-world
+
+# do stuff to allow docker to run as non-root
+# see https://docs.docker.com/engine/install/linux-postinstall/#next-steps
+## Create the docker group.
+sudo groupadd docker
+# Add your user to the docker group.
+sudo usermod -aG docker $USER
+# Log out and log back in so that your group membership is re-evaluated.
+# you can also run the following command to activate the changes to groups
+# newgrp docker
+# Verify that you can run docker commands without sudo:
+# docker run hello-world
+# Configure Docker to start on boot
+# sudo systemctl enable docker.service
+# sudo systemctl enable containerd.service
+
+### Global Node Packages
+sudo npm install -g mdpdf --unsafe-perm=true --allow-root
+sudo npm install -g mozjpeg --unsafe-perm=true --allow-root
+sudo npm install -g browser-sync caniuse-cmd commitizen concurrently doctoc html-minifier grunt-cli gulp-cli lerna lite-server local-cors-proxy maildev prettier sass semantic-release-cli serve standard-version svgo uglify-js
+
+### Other packages / utils
+sudo dnf install pandoc ShellCheck ocrmypdf pdftk wkhtmltopdf aspell ncdu zeal peek Thunar screenkey flameshot syncthing -y
+sudo -H pip3 install scour yq
